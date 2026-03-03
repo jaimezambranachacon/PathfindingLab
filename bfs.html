@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BFS Visualizador No Dirigido</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+    <style>
+        .grafo { height: 350px; background: #fff; border-radius: 1rem; border: 1px solid #e2e8f0; }
+        .tabla-container { height: 350px; overflow-y: auto; background: #fff; border-radius: 1rem; border: 1px solid #e2e8f0; }
+        .fila-activa { background-color: #f0f9ff; border-left: 4px solid #3b82f6; font-weight: bold; }
+        .badge-cola { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 1px; display: inline-block; }
+    </style>
+</head>
+<body class="bg-slate-50 p-6 font-sans text-slate-800">
+
+    <div class="max-w-6xl mx-auto space-y-12">
+        <header class="text-center">
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase italic">Simulador BFS No Dirigido</h1>
+            <p class="text-slate-500 text-sm italic">Los nodos se exploran en todas las direcciones conectadas.</p>
+        </header>
+
+        <section class="bg-white p-6 rounded-3xl shadow-md border border-slate-200">
+            <h2 class="text-xl font-bold mb-4 text-blue-600">1. Estructura Jerárquica 🌳</h2>
+            <div class="grid lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-4">
+                    <div id="cy1" class="grafo shadow-inner"></div>
+                    <div class="flex justify-center gap-2 bg-slate-100 p-2 rounded-xl">
+                        <button onclick="retroceder(1)" class="px-4 py-2 bg-white border rounded-lg hover:bg-slate-50 font-bold italic">⬅ Atrás</button>
+                        <button onclick="avanzar(1)" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">Siguiente Paso</button>
+                        <button onclick="resetear(1)" class="px-4 py-2 bg-rose-500 text-white rounded-lg font-bold italic">Reset 🔄</button>
+                    </div>
+                </div>
+                <div class="tabla-container shadow-sm">
+                    <table class="w-full text-sm text-left">
+                        <thead class="sticky top-0 bg-slate-100 border-b border-slate-200 font-bold">
+                            <tr><th class="p-3 w-20 text-center">Actual</th><th class="p-3">Cola (Queue)</th></tr>
+                        </thead>
+                        <tbody id="tabla1"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-3xl shadow-md border border-slate-200">
+            <h2 class="text-xl font-bold mb-4 text-blue-600">2. Red de Malla 🕸</h2>
+            <div class="grid lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-4">
+                    <div id="cy2" class="grafo shadow-inner"></div>
+                    <div class="flex justify-center gap-2 bg-slate-100 p-2 rounded-xl">
+                        <button onclick="retroceder(2)" class="px-4 py-2 bg-white border rounded-lg hover:bg-slate-50 font-bold italic">⬅ Atrás</button>
+                        <button onclick="avanzar(2)" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">Siguiente Paso</button>
+                        <button onclick="resetear(2)" class="px-4 py-2 bg-rose-500 text-white rounded-lg font-bold italic">Reset 🔄</button>
+                    </div>
+                </div>
+                <div class="tabla-container shadow-sm">
+                    <table class="w-full text-sm text-left">
+                        <thead class="sticky top-0 bg-slate-100 border-b border-slate-200 font-bold">
+                            <tr><th class="p-3 w-20 text-center">Actual</th><th class="p-3">Cola (Queue)</th></tr>
+                        </thead>
+                        <tbody id="tabla2"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-white p-6 rounded-3xl shadow-xl border-2 border-blue-500">
+            <h2 class="text-xl font-bold mb-2 text-blue-600 text-center uppercase">3. Interactivo (Inicio y Fin) 🎯</h2>
+            <p id="msg3" class="text-xs text-slate-500 mb-4 italic text-center underline">Click Izq: Nodo Inicial | Click Der: Nodo Final</p>
+            <div class="grid lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-4">
+                    <div id="cy3" class="grafo shadow-inner"></div>
+                    <div class="flex justify-center gap-2 bg-slate-100 p-2 rounded-xl">
+                        <button onclick="retroceder(3)" class="px-4 py-2 bg-white border rounded-lg hover:bg-slate-50 font-bold italic">⬅ Atrás</button>
+                        <button onclick="avanzar(3)" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold">Siguiente Paso</button>
+                        <button onclick="resetear(3)" class="px-4 py-2 bg-rose-500 text-white rounded-lg font-bold italic">Reset 🔄</button>
+                    </div>
+                </div>
+                <div class="tabla-container shadow-sm">
+                    <table class="w-full text-sm text-left">
+                        <thead class="sticky top-0 bg-slate-100 border-b border-slate-200 font-bold">
+                            <tr><th class="p-3 w-20 text-center">Actual</th><th class="p-3">Cola (Queue)</th></tr>
+                        </thead>
+                        <tbody id="tabla3"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Estilo SIN flechas (No Dirigido)
+        const estS = [
+            { selector: 'node', style: { 'label': 'data(id)', 'text-valign': 'center', 'color': '#000', 'background-color': '#fff', 'border-width': 2, 'border-color': '#94a3b8', 'width': 30, 'height': 30, 'font-size': '12px' } },
+            { selector: 'edge', style: { 'width': 2, 'line-color': '#cbd5e1', 'curve-style': 'bezier' } }, // Quitamos target-arrow-shape
+            { selector: '.visitado', style: { 'background-color': '#334155', 'color': '#fff' } },
+            { selector: '.frontera', style: { 'background-color': '#3b82f6', 'color': '#fff' } },
+            { selector: '.activo', style: { 'border-color': '#f59e0b', 'border-width': 4 } },
+            { selector: '.inicio', style: { 'background-color': '#2563eb', 'color': '#fff' } },
+            { selector: '.meta', style: { 'background-color': '#f43f5e', 'color': '#fff' } }
+        ];
+
+        const red9 = [
+            {data:{id:'1'}},{data:{id:'2'}},{data:{id:'3'}},{data:{id:'4'}},{data:{id:'5'}},{data:{id:'6'}},{data:{id:'7'}},{data:{id:'8'}},{data:{id:'9'}},
+            {data:{source:'1',target:'2'}},{data:{source:'1',target:'3'}},{data:{source:'2',target:'4'}},{data:{source:'2',target:'5'}},
+            {data:{source:'3',target:'6'}},{data:{source:'4',target:'7'}},{data:{source:'5',target:'8'}},{data:{source:'6',target:'9'}},
+            {data:{source:'7',target:'8'}},{data:{source:'3',target:'5'}}
+        ];
+
+        const motores = {};
+
+        function init() {
+            // Ejemplo 1: Árbol (Visualizado sin flechas)
+            motores[1] = { cy: cytoscape({ container: document.getElementById('cy1'), elements: [
+                {data:{id:'A'}},{data:{id:'B'}},{data:{id:'C'}},{data:{id:'D'}},{data:{id:'E'}},{data:{id:'F'}},{data:{id:'G'}},
+                {data:{source:'A',target:'B'}},{data:{source:'A',target:'C'}},{data:{source:'B',target:'D'}},{data:{source:'B',target:'E'}},{data:{source:'C',target:'F'}},{data:{source:'C',target:'G'}}
+            ], style: estS, layout: { name: 'breadthfirst', padding: 20, spacingFactor: 0.8 } }), step: 0, hist: [], start: 'A' };
+            calcularBFS(1);
+
+            // Ejemplo 2: Red
+            motores[2] = { cy: cytoscape({ container: document.getElementById('cy2'), elements: JSON.parse(JSON.stringify(red9)), style: estS, layout: { name: 'cose', padding: 20 } }), step: 0, hist: [], start: '1' };
+            calcularBFS(2);
+
+            // Ejemplo 3: Interactivo
+            motores[3] = { cy: cytoscape({ container: document.getElementById('cy3'), elements: JSON.parse(JSON.stringify(red9)), style: estS, layout: { name: 'cose', padding: 20 } }), step: 0, hist: [], start: null, end: null };
+            motores[3].cy.on('tap', 'node', e => { motores[3].start = e.target.id(); motores[3].cy.nodes().removeClass('inicio'); e.target.addClass('inicio'); calcularBFS(3); });
+            motores[3].cy.on('cxttap', 'node', e => { motores[3].end = e.target.id(); motores[3].cy.nodes().removeClass('meta'); e.target.addClass('meta'); calcularBFS(3); });
+        }
+
+        function calcularBFS(id) {
+            const m = motores[id];
+            if (id === 3 && (!m.start || !m.end)) return;
+            m.hist = [];
+            let q = [m.start], v = new Set([m.start]);
+            m.hist.push({ cur: null, q: [m.start], v: [] });
+            
+            while(q.length > 0) {
+                let cur = q.shift();
+                
+                // Lógica No Dirigida: .neighborhood('node') obtiene vecinos por cualquier arista conectada
+                let neighbors = m.cy.getElementById(cur).neighborhood('node').filter(n => !v.has(n.id()));
+                
+                neighbors.forEach(n => {
+                    v.add(n.id());
+                    q.push(n.id());
+                });
+
+                m.hist.push({ cur, q: [...q], v: Array.from(v) });
+                if(cur === m.end) break;
+            }
+            m.step = 0;
+            render(id);
+        }
+
+        function avanzar(id) { if(motores[id].step < motores[id].hist.length - 1) { motores[id].step++; render(id); } }
+        function retroceder(id) { if(motores[id].step > 0) { motores[id].step--; render(id); } }
+        function resetear(id) { 
+            motores[id].step = 0; 
+            if(id === 3) { motores[id].start = motores[id].end = null; motores[id].hist = []; motores[id].cy.nodes().removeClass('inicio meta visitado frontera activo'); }
+            render(id); 
+        }
+
+        function render(id) {
+            const m = motores[id];
+            const t = document.getElementById('tabla' + id);
+            if (!m.hist.length) { t.innerHTML = ""; return; }
+            const s = m.hist[m.step];
+            
+            m.cy.nodes().removeClass('visitado frontera activo');
+            s.v.forEach(n => m.cy.getElementById(n).addClass('visitado'));
+            s.q.forEach(n => m.cy.getElementById(n).addClass('frontera'));
+            if(s.cur) m.cy.getElementById(s.cur).addClass('activo');
+
+            t.innerHTML = m.hist.slice(1, m.step + 1).map((h, i) => `
+                <tr class="${i === m.step - 1 ? 'fila-activa' : ''}">
+                    <td class="p-3 text-center font-bold text-blue-600 underline">${h.cur}</td>
+                    <td class="p-3">${h.q.map(x => `<span class="badge-cola">${x}</span>`).join('') || '<span class="italic text-slate-400">Vacía</span>'}</td>
+                </tr>
+            `).join('');
+            t.parentElement.parentElement.scrollTop = 9999;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
