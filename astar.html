@@ -7,8 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
     <style>
-        .grafo { height: 400px; background: #fff; border-radius: 2rem; border: 1px solid #e2e8f0; }
-        .tabla-container { height: 400px; overflow-y: auto; background: #fff; border-radius: 2rem; border: 1px solid #e2e8f0; }
+        .grafo { height: 450px; background: #fff; border-radius: 2rem; border: 1px solid #e2e8f0; }
+        .tabla-container { height: 450px; overflow-y: auto; background: #fff; border-radius: 2rem; border: 1px solid #e2e8f0; }
         .fila-activa { background-color: #f0fdf4; border-left: 5px solid #22c55e; }
         .math-font { font-family: 'Courier New', monospace; }
         .linea-h { stroke-dasharray: 8; animation: dash 1.5s linear infinite; }
@@ -20,7 +20,7 @@
     <div class="max-w-7xl mx-auto space-y-6">
         <header class="text-center">
             <h1 class="text-3xl font-black uppercase italic tracking-tighter text-slate-900">A* Master: Auditoría Matemática 🧮</h1>
-            <p class="text-slate-500 italic">Análisis paso a paso de la fórmula Euclidiana y el costo acumulado.</p>
+            <p class="text-slate-500 italic">Por: Jaime Zambrana Chacón</p>
         </header>
 
         <div class="grid lg:grid-cols-3 gap-6">
@@ -50,9 +50,17 @@
 
         <div class="grid md:grid-cols-2 gap-6">
             <div class="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl">
-                <h3 class="text-center font-bold text-slate-500 uppercase text-xs mb-4 tracking-widest">🥊 Comparativa de Candidatos</h3>
-                <div id="duelo-container" class="space-y-3">
-                    <div class="text-center text-slate-600 italic py-10 font-mono text-xs">Esperando análisis...</div>
+                <h3 class="text-blue-400 font-bold uppercase text-xs mb-4 tracking-widest">📘 Fundamentación: Heurística Euclidiana</h3>
+                <p class="text-[11px] text-slate-400 leading-relaxed mb-4">
+                    Se utiliza la <b>Distancia Euclidiana</b> porque representa el "vuelo de pájaro" entre dos puntos en un espacio continuo. Es la mejor opción en grafos espaciales porque:
+                </p>
+                <ul class="text-[11px] space-y-2 text-slate-300">
+                    <li>✅ <b>Es Admisible:</b> Nunca sobreestima el costo real, garantizando la ruta óptima.</li>
+                    <li>✅ <b>Es Consistente:</b> Sigue la desigualdad triangular, evitando retrocesos innecesarios.</li>
+                    <li>✅ <b>Realismo:</b> En un mapa libre de rejillas, la línea recta es la distancia mínima absoluta.</li>
+                </ul>
+                <div id="duelo-container" class="mt-6 space-y-2">
+                     <p class="text-[10px] text-slate-500 uppercase italic">Análisis de vecinos...</p>
                 </div>
             </div>
 
@@ -66,12 +74,17 @@
     </div>
 
     <script>
+        // Nodos con etiquetas de coordenadas para el estudiante
         const nodes = [
-            { data: { id: '1' }, position: { x: 100, y: 100 } }, { data: { id: '2' }, position: { x: 250, y: 80 } },
-            { data: { id: '3' }, position: { x: 120, y: 250 } }, { data: { id: '4' }, position: { x: 420, y: 110 } },
-            { data: { id: '5' }, position: { x: 280, y: 240 } }, { data: { id: '6' }, position: { x: 110, y: 400 } },
-            { data: { id: '7' }, position: { x: 430, y: 260 } }, { data: { id: '8' }, position: { x: 270, y: 390 } },
-            { data: { id: '9' }, position: { x: 440, y: 410 } }
+            { data: { id: '1', coords: '(100,100)' }, position: { x: 100, y: 100 } }, 
+            { data: { id: '2', coords: '(250,80)' }, position: { x: 250, y: 80 } },
+            { data: { id: '3', coords: '(120,250)' }, position: { x: 120, y: 250 } }, 
+            { data: { id: '4', coords: '(420,110)' }, position: { x: 420, y: 110 } },
+            { data: { id: '5', coords: '(280,240)' }, position: { x: 280, y: 240 } }, 
+            { data: { id: '6', coords: '(110,400)' }, position: { x: 110, y: 400 } },
+            { data: { id: '7', coords: '(430,260)' }, position: { x: 430, y: 260 } }, 
+            { data: { id: '8', coords: '(270,390)' }, position: { x: 270, y: 390 } },
+            { data: { id: '9', coords: '(440,410)' }, position: { x: 440, y: 410 } }
         ];
 
         const edges = [
@@ -86,14 +99,14 @@
 
         function init() {
             cy = cytoscape({ container: document.getElementById('cy'), elements: { nodes, edges }, style: [
-                { selector: 'node', style: { 'label': 'data(id)', 'text-valign': 'center', 'color': '#000', 'background-color': '#fff', 'border-width': 2, 'border-color': '#94a3b8', 'width': 30, 'height': 30, 'font-size': '12px', 'font-weight': 'bold' } },
+                { selector: 'node', style: { 'label': 'data(id)\ndata(coords)', 'text-wrap': 'wrap', 'text-valign': 'bottom', 'text-margin-y': 5, 'color': '#64748b', 'background-color': '#fff', 'border-width': 2, 'border-color': '#94a3b8', 'width': 30, 'height': 30, 'font-size': '8px' } },
                 { selector: 'edge', style: { 'label': 'data(weight)', 'width': 2, 'line-color': '#cbd5e1', 'font-size': '10px', 'color': '#94a3b8', 'curve-style': 'bezier' } },
                 { selector: '.visitado', style: { 'background-color': '#1e293b', 'color': '#fff' } },
                 { selector: '.frontera', style: { 'background-color': '#4ade80', 'color': '#fff' } },
-                { selector: '.activo', style: { 'border-color': '#f59e0b', 'border-width': 5, 'width': 35, 'height': 35 } },
+                { selector: '.activo', style: { 'border-color': '#f59e0b', 'border-width': 5 } },
                 { selector: '.inicio', style: { 'background-color': '#2563eb', 'color': '#fff' } },
                 { selector: '.meta', style: { 'background-color': '#ef4444', 'color': '#fff' } },
-                { selector: '.rayo-h', style: { 'line-style': 'dashed', 'line-color': '#f97316', 'width': 2, 'opacity': 0.8, 'target-arrow-shape': 'vee', 'target-arrow-color': '#f97316', 'label': 'dist. h', 'font-size': '10px', 'color': '#f97316' } }
+                { selector: '.rayo-h', style: { 'line-style': 'dashed', 'line-color': '#f97316', 'width': 2, 'opacity': 0.8, 'target-arrow-shape': 'vee', 'target-arrow-color': '#f97316', 'label': 'h', 'font-size': '10px', 'color': '#f97316' } }
             ], layout: { name: 'preset' }, userZoomingEnabled: false });
 
             cy.on('tap', 'node', e => { startNode = e.target.id(); cy.nodes().removeClass('inicio'); e.target.addClass('inicio'); calcular(); });
@@ -142,7 +155,6 @@
                     competidores: myNeighbors,
                     hDetail: getHData(current.id, endNode)
                 });
-
                 if (current.id === endNode) break;
             }
             step = 0; render();
@@ -169,17 +181,15 @@
                 </tr>
             `).join('');
 
-            // ACTUALIZACIÓN DEL PANEL MATEMÁTICO
             const mathPanel = document.getElementById('math-panel');
             const h = s.hDetail;
             mathPanel.innerHTML = `
                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <div class="text-blue-700 font-bold mb-1">Pasado g(n):</div>
+                    <div class="text-blue-700 font-bold mb-1">Costo Acumulado g(n):</div>
                     <div class="text-slate-600 text-xs">${s.gText} = <span class="text-blue-600 font-bold">${s.g}</span></div>
                 </div>
                 <div class="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                    <div class="text-orange-700 font-bold mb-1">Futuro h(n) [Euclidiana]:</div>
-                    <div class="text-[10px] text-slate-500 mb-2">√((x₂-x₁)² + (y₂-y₁)²) / 10</div>
+                    <div class="text-orange-700 font-bold mb-1">Cálculo Euclidiano h(n):</div>
                     <div class="text-slate-600 text-xs">
                         √(${h.x2.toFixed(0)} - ${h.x1.toFixed(0)})² + (${h.y2.toFixed(0)} - ${h.y1.toFixed(0)})² <br>
                         √(${Math.pow(h.x2-h.x1,2).toFixed(0)} + ${Math.pow(h.y2-h.y1,2).toFixed(0)}) / 10 = 
@@ -187,7 +197,6 @@
                     </div>
                 </div>
                 <div class="bg-green-600 p-3 rounded-lg text-white text-center">
-                    <div class="text-[10px] uppercase font-bold opacity-80">Total f(n)</div>
                     <div class="text-xl font-black">${s.g} + ${s.h.toFixed(2)} = ${s.f.toFixed(2)}</div>
                 </div>
             `;
@@ -196,16 +205,10 @@
             if (s.competidores && s.competidores.length > 0) {
                 const compSorted = [...s.competidores].sort((a,b) => a.f - b.f);
                 duelo.innerHTML = compSorted.map((c, idx) => `
-                    <div class="p-3 rounded-xl border ${idx === 0 ? 'bg-slate-800 border-green-500' : 'bg-slate-800 border-slate-700 opacity-40'}">
-                        <div class="flex justify-between items-center text-[10px]">
-                            <span class="text-slate-400">Candidato ${c.id}</span>
-                            <span class="text-green-500 font-bold">${idx === 0 ? 'GANADOR f' : ''}</span>
-                        </div>
-                        <div class="text-lg font-black ${idx === 0 ? 'text-white' : 'text-slate-500'}">f: ${c.f.toFixed(1)}</div>
+                    <div class="p-2 rounded-lg border text-[10px] ${idx === 0 ? 'bg-slate-800 border-green-500' : 'bg-slate-800 border-slate-700 opacity-40'}">
+                        Candidato ${c.id} -> f: ${c.f.toFixed(1)}
                     </div>
                 `).join('');
-            } else {
-                duelo.innerHTML = `<div class="text-center text-slate-600 italic py-10 font-mono text-xs">Sin nuevos vecinos en este paso.</div>`;
             }
         }
 
