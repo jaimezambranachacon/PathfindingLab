@@ -1,221 +1,774 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A* Master: Auditoría Matemática</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
-    <style>
-        .grafo { height: 450px; background: #fff; border-radius: 2rem; border: 1px solid #e2e8f0; }
-        .tabla-container { height: 450px; overflow-y: auto; background: #fff; border-radius: 2rem; border: 1px solid #e2e8f0; }
-        .fila-activa { background-color: #f0fdf4; border-left: 5px solid #22c55e; }
-        .math-font { font-family: 'Courier New', monospace; }
-        .linea-h { stroke-dasharray: 8; animation: dash 1.5s linear infinite; }
-        @keyframes dash { to { stroke-dashoffset: -24; } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>A* Master Pro: Auditoría Matemática + Heurística</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/cytoscape/dist/cytoscape.min.js"></script>
+  <style>
+    .grafo { height: 430px; background:#fff; border-radius: 2rem; border:1px solid #e2e8f0; transition: all 0.3s ease; }
+    .tabla-container { height: 430px; overflow-y:auto; background:#fff; border-radius:2rem; border:1px solid #e2e8f0; }
+    .fila-activa { background-color:#f0fdf4; border-left:5px solid #22c55e; animation: pulse-green 2s infinite; }
+    .fila-actual { background-color:#fffbeb; border-left:5px solid #f59e0b; animation: pulse-orange 2s infinite; }
+    .math-font { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(0,0,0,.08); transition: all 0.2s; }
+    .badge:hover { transform: scale(1.05); background: #f8fafc; }
+    .linea-h { stroke-dasharray: 8; animation: dash 1.5s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -24; } }
+    @keyframes pulse-green { 0% { border-left-color: #22c55e; } 50% { border-left-color: #86efac; } 100% { border-left-color: #22c55e; } }
+    @keyframes pulse-orange { 0% { border-left-color: #f59e0b; } 50% { border-left-color: #fdba74; } 100% { border-left-color: #f59e0b; } }
+    .btn { transition: all 0.2s; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+    .btn:active { transform: translateY(0); }
+    .node-tooltip { position: absolute; background: #1e293b; color: white; padding: 4px 8px; border-radius: 8px; font-size: 11px; pointer-events: none; z-index: 1000; }
+    .stat-card { transition: all 0.2s; }
+    .stat-card:hover { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+  </style>
 </head>
 <body class="bg-slate-50 p-6 text-slate-800">
 
-    <div class="max-w-7xl mx-auto space-y-6">
-        <header class="text-center">
-            <h1 class="text-3xl font-black uppercase italic tracking-tighter text-slate-900">A* Master: Auditoría Matemática 🧮</h1>
-            <p class="text-slate-500 italic">Por: Jaime Zambrana Chacón</p>
-        </header>
+  <div class="max-w-7xl mx-auto space-y-6">
+    <header class="text-center">
+      <h1 class="text-3xl font-black uppercase italic tracking-tighter text-slate-900">
+        A* Master Pro: Auditoría Matemática 🧮
+      </h1>
+      <p class="text-slate-500 italic">
+        Heurística euclidiana paso a paso, con coordenadas, OPEN/CLOSED, desempates y justificación de elección.
+      </p>
+      <div class="mt-3 flex flex-wrap justify-center gap-2 text-xs">
+        <span class="badge bg-white">🟦 Click = Inicio</span>
+        <span class="badge bg-white">🟥 Click derecho = Meta</span>
+        <span class="badge bg-white">🟩 Verde = frontera (OPEN)</span>
+        <span class="badge bg-white">⬛ Visitado = CLOSED</span>
+        <span class="badge bg-white">🟧 Borde = actual</span>
+        <span class="badge bg-white">✨ Doble click = info nodo</span>
+      </div>
+    </header>
 
-        <div class="grid lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2 space-y-4">
-                <div id="cy" class="grafo shadow-inner"></div>
-                <div class="flex justify-center gap-3 bg-slate-100 p-3 rounded-2xl">
-                    <button onclick="retroceder()" class="px-6 py-2 bg-white border rounded-xl font-bold hover:bg-slate-50 transition">⬅ Atrás</button>
-                    <button onclick="avanzar()" class="px-10 py-2 bg-green-600 text-white rounded-xl font-black shadow-lg hover:bg-green-700 transition">Siguiente Paso ➡️</button>
-                    <button onclick="resetear()" class="px-6 py-2 bg-rose-500 text-white rounded-xl font-bold">Reset 🔄</button>
-                </div>
-            </div>
+    <div class="grid lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2 space-y-4">
+        <div id="cy" class="grafo shadow-inner"></div>
 
-            <div class="tabla-container border-t-8 border-green-500">
-                <table class="w-full text-[11px] text-left border-collapse">
-                    <thead class="sticky top-0 bg-white border-b shadow-sm z-10 text-slate-400">
-                        <tr>
-                            <th class="p-3">Nodo</th>
-                            <th class="p-3">g (Real)</th>
-                            <th class="p-3">h (Est.)</th>
-                            <th class="p-3 text-right">f (Total)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-body" class="divide-y divide-slate-100 math-font"></tbody>
-                </table>
+        <div class="flex flex-col gap-3 bg-slate-100 p-3 rounded-2xl">
+          <div class="flex flex-wrap items-center justify-center gap-2">
+            <button onclick="retroceder()" class="btn px-6 py-2 bg-white border rounded-xl font-bold hover:bg-slate-50 transition">⬅ Atrás</button>
+            <button onclick="avanzar()" class="btn px-10 py-2 bg-green-600 text-white rounded-xl font-black shadow-lg hover:bg-green-700 transition">Siguiente Paso ➡️</button>
+            <button onclick="resetear()" class="btn px-6 py-2 bg-rose-500 text-white rounded-xl font-bold hover:bg-rose-600 transition">Reset 🔄</button>
+            <button onclick="exportarResultados()" class="btn px-6 py-2 bg-blue-500 text-white rounded-xl font-bold hover:bg-blue-600 transition">📥 Exportar</button>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-3 text-xs">
+            <div class="stat-card bg-white rounded-xl p-3 border">
+              <div class="font-bold text-slate-500">Regla de selección</div>
+              <div class="math-font mt-1">
+                Primero menor <b>f</b>, si empata → menor <b>h</b>, si empata → menor <b>g</b>, si empata → ID menor
+              </div>
             </div>
+            <div class="stat-card bg-white rounded-xl p-3 border">
+              <div class="font-bold text-slate-500">Heurística</div>
+              <div class="math-font mt-1">
+                h(n)= √((x₂-x₁)²+(y₂-y₁)²) / <span id="hScaleLabel">10</span>
+              </div>
+              <div class="mt-2 flex items-center gap-2">
+                <span class="text-slate-500">Escala:</span>
+                <input id="hScale" type="range" min="1" max="30" value="10" class="w-full" oninput="updateScale(this.value)">
+                <span class="math-font font-bold" id="hScaleVal">10</span>
+              </div>
+            </div>
+            <div class="stat-card bg-white rounded-xl p-3 border">
+              <div class="font-bold text-slate-500">Estado</div>
+              <div id="statusBar" class="math-font mt-1 text-slate-700">Selecciona Inicio y Meta.</div>
+              <div id="statsBar" class="text-[10px] text-slate-400 mt-1"></div>
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div class="grid md:grid-cols-2 gap-6">
-            <div class="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl">
-                <h3 class="text-blue-400 font-bold uppercase text-xs mb-4 tracking-widest">📘 Fundamentación: Heurística Euclidiana</h3>
-                <p class="text-[11px] text-slate-400 leading-relaxed mb-4">
-                    Se utiliza la <b>Distancia Euclidiana</b> porque representa el "vuelo de pájaro" entre dos puntos en un espacio continuo. Es la mejor opción en grafos espaciales porque:
-                </p>
-                <ul class="text-[11px] space-y-2 text-slate-300">
-                    <li>✅ <b>Es Admisible:</b> Nunca sobreestima el costo real, garantizando la ruta óptima.</li>
-                    <li>✅ <b>Es Consistente:</b> Sigue la desigualdad triangular, evitando retrocesos innecesarios.</li>
-                    <li>✅ <b>Realismo:</b> En un mapa libre de rejillas, la línea recta es la distancia mínima absoluta.</li>
-                </ul>
-                <div id="duelo-container" class="mt-6 space-y-2">
-                     <p class="text-[10px] text-slate-500 uppercase italic">Análisis de vecinos...</p>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-[2rem] shadow-xl border-2 border-green-100 math-font">
-                <h3 class="font-bold text-green-700 uppercase text-xs mb-4 tracking-widest border-b border-green-50 pb-2">🔬 Desglose de la Fórmula (Nodo Actual)</h3>
-                <div id="math-panel" class="space-y-4 text-sm">
-                    <div class="text-slate-400 italic text-center py-8">Configura Inicio y Meta para ver los cálculos.</div>
-                </div>
-            </div>
+      <div class="tabla-container border-t-8 border-green-500">
+        <div class="sticky top-0 bg-white p-3 border-b z-10">
+          <div class="font-black text-slate-900">Tabla de expansión (historial)</div>
+          <div class="text-xs text-slate-400">Muestra el nodo expandido en cada paso (g, h, f) y coordenadas.</div>
         </div>
+        <table class="w-full text-[11px] text-left border-collapse">
+          <thead class="sticky top-[72px] bg-white border-b shadow-sm z-10 text-slate-400">
+            <tr>
+              <th class="p-3">Paso</th>
+              <th class="p-3">Nodo</th>
+              <th class="p-3">Coord (x,y)</th>
+              <th class="p-3">g</th>
+              <th class="p-3">h</th>
+              <th class="p-3 text-right">f</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body" class="divide-y divide-slate-100 math-font"></tbody>
+        </table>
+      </div>
     </div>
 
-    <script>
-        // Nodos con etiquetas de coordenadas para el estudiante
-        const nodes = [
-            { data: { id: '1', coords: '(100,100)' }, position: { x: 100, y: 100 } }, 
-            { data: { id: '2', coords: '(250,80)' }, position: { x: 250, y: 80 } },
-            { data: { id: '3', coords: '(120,250)' }, position: { x: 120, y: 250 } }, 
-            { data: { id: '4', coords: '(420,110)' }, position: { x: 420, y: 110 } },
-            { data: { id: '5', coords: '(280,240)' }, position: { x: 280, y: 240 } }, 
-            { data: { id: '6', coords: '(110,400)' }, position: { x: 110, y: 400 } },
-            { data: { id: '7', coords: '(430,260)' }, position: { x: 430, y: 260 } }, 
-            { data: { id: '8', coords: '(270,390)' }, position: { x: 270, y: 390 } },
-            { data: { id: '9', coords: '(440,410)' }, position: { x: 440, y: 410 } }
-        ];
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl">
+        <h3 class="text-center font-bold text-slate-500 uppercase text-xs mb-4 tracking-widest">🥊 Comparativa OPEN (por qué se eligió)</h3>
+        <div id="duelo-container" class="space-y-3">
+          <div class="text-center text-slate-600 italic py-10 font-mono text-xs">Esperando análisis...</div>
+        </div>
+      </div>
 
-        const edges = [
-            { data: { source: '1', target: '2', weight: 10 } }, { data: { source: '1', target: '3', weight: 12 } },
-            { data: { source: '2', target: '4', weight: 15 } }, { data: { source: '2', target: '5', weight: 8 } },
-            { data: { source: '3', target: '6', weight: 14 } }, { data: { source: '4', target: '7', weight: 9 } },
-            { data: { source: '5', target: '8', weight: 11 } }, { data: { source: '7', target: '9', weight: 15 } },
-            { data: { source: '8', target: '9', weight: 7 } }, { data: { source: '3', target: '5', weight: 14 } }
-        ];
+      <div class="bg-white p-6 rounded-[2rem] shadow-xl border-2 border-green-100 math-font">
+        <h3 class="font-bold text-green-700 uppercase text-xs mb-4 tracking-widest border-b border-green-50 pb-2">
+          🔬 Panel Matemático (Nodo actual)
+        </h3>
+        <div id="math-panel" class="space-y-4 text-sm">
+          <div class="text-slate-400 italic text-center py-8">Configura Inicio y Meta para ver los cálculos.</div>
+        </div>
+      </div>
+    </div>
 
-        let cy, startNode, endNode, history = [], step = 0;
+    <div class="bg-white p-6 rounded-[2rem] shadow-xl border">
+      <h3 class="font-black text-slate-900">📦 OPEN y CLOSED del paso actual</h3>
+      <p class="text-xs text-slate-400 mb-4">OPEN está ordenado por la regla de selección (f, luego h, luego g, luego id).</p>
+      <div class="grid md:grid-cols-2 gap-4 text-[11px] math-font">
+        <div class="p-4 rounded-2xl border bg-slate-50">
+          <div class="font-bold text-slate-700 mb-2">OPEN (frontera)</div>
+          <div id="openList" class="text-slate-700">-</div>
+        </div>
+        <div class="p-4 rounded-2xl border bg-slate-50">
+          <div class="font-bold text-slate-700 mb-2">CLOSED (visitados)</div>
+          <div id="closedList" class="text-slate-700">-</div>
+        </div>
+      </div>
+    </div>
 
-        function init() {
-            cy = cytoscape({ container: document.getElementById('cy'), elements: { nodes, edges }, style: [
-                { selector: 'node', style: { 'label': 'data(id)\ndata(coords)', 'text-wrap': 'wrap', 'text-valign': 'bottom', 'text-margin-y': 5, 'color': '#64748b', 'background-color': '#fff', 'border-width': 2, 'border-color': '#94a3b8', 'width': 30, 'height': 30, 'font-size': '8px' } },
-                { selector: 'edge', style: { 'label': 'data(weight)', 'width': 2, 'line-color': '#cbd5e1', 'font-size': '10px', 'color': '#94a3b8', 'curve-style': 'bezier' } },
-                { selector: '.visitado', style: { 'background-color': '#1e293b', 'color': '#fff' } },
-                { selector: '.frontera', style: { 'background-color': '#4ade80', 'color': '#fff' } },
-                { selector: '.activo', style: { 'border-color': '#f59e0b', 'border-width': 5 } },
-                { selector: '.inicio', style: { 'background-color': '#2563eb', 'color': '#fff' } },
-                { selector: '.meta', style: { 'background-color': '#ef4444', 'color': '#fff' } },
-                { selector: '.rayo-h', style: { 'line-style': 'dashed', 'line-color': '#f97316', 'width': 2, 'opacity': 0.8, 'target-arrow-shape': 'vee', 'target-arrow-color': '#f97316', 'label': 'h', 'font-size': '10px', 'color': '#f97316' } }
-            ], layout: { name: 'preset' }, userZoomingEnabled: false });
+  </div>
 
-            cy.on('tap', 'node', e => { startNode = e.target.id(); cy.nodes().removeClass('inicio'); e.target.addClass('inicio'); calcular(); });
-            cy.on('cxttap', 'node', e => { endNode = e.target.id(); cy.nodes().removeClass('meta'); e.target.addClass('meta'); calcular(); });
+<script>
+  // ======== DATOS DEL GRAFO (puedes editar) ========
+  const nodes = [
+    { data: { id: '1' }, position: { x: 100, y: 100 } },
+    { data: { id: '2' }, position: { x: 250, y: 80 } },
+    { data: { id: '3' }, position: { x: 120, y: 250 } },
+    { data: { id: '4' }, position: { x: 420, y: 110 } },
+    { data: { id: '5' }, position: { x: 280, y: 240 } },
+    { data: { id: '6' }, position: { x: 110, y: 400 } },
+    { data: { id: '7' }, position: { x: 430, y: 260 } },
+    { data: { id: '8' }, position: { x: 270, y: 390 } },
+    { data: { id: '9' }, position: { x: 440, y: 410 } }
+  ];
+
+  // Aristas con peso
+  const edges = [
+    { data: { id:'e12', source: '1', target: '2', weight: 10 } },
+    { data: { id:'e13', source: '1', target: '3', weight: 12 } },
+    { data: { id:'e24', source: '2', target: '4', weight: 15 } },
+    { data: { id:'e25', source: '2', target: '5', weight: 8 } },
+    { data: { id:'e36', source: '3', target: '6', weight: 14 } },
+    { data: { id:'e47', source: '4', target: '7', weight: 9 } },
+    { data: { id:'e58', source: '5', target: '8', weight: 11 } },
+    { data: { id:'e79', source: '7', target: '9', weight: 15 } },
+    { data: { id:'e89', source: '8', target: '9', weight: 7 } },
+    { data: { id:'e35', source: '3', target: '5', weight: 14 } }
+  ];
+
+  let cy;
+  let startNode = null, endNode = null;
+  let history = [];
+  let step = 0;
+  let H_SCALE = 10;
+  let animacionInterval = null;
+  let modoAutomatico = false;
+
+  // ======== INICIALIZACIÓN CYTOSCAPE ========
+  function init() {
+    cy = cytoscape({
+      container: document.getElementById('cy'),
+      elements: { nodes, edges },
+      style: [
+        { selector: 'node', style: {
+            'label': 'data(id)',
+            'text-valign': 'center',
+            'color': '#0f172a',
+            'background-color': '#fff',
+            'border-width': 2,
+            'border-color': '#94a3b8',
+            'width': 32,
+            'height': 32,
+            'font-size': '12px',
+            'font-weight': 'bold',
+            'transition-property': 'background-color, border-color, width, height',
+            'transition-duration': '0.3s'
+          }
+        },
+        { selector: 'edge', style: {
+            'label': 'data(weight)',
+            'width': 2,
+            'line-color': '#cbd5e1',
+            'font-size': '10px',
+            'color': '#94a3b8',
+            'curve-style': 'bezier',
+            'transition-property': 'line-color, width',
+            'transition-duration': '0.3s'
+          }
+        },
+        { selector: '.visitado', style: { 'background-color': '#0f172a', 'color': '#fff', 'border-color': '#0f172a' } },
+        { selector: '.frontera', style: { 'background-color': '#22c55e', 'color': '#fff', 'border-color': '#16a34a' } },
+        { selector: '.activo', style: { 'border-color': '#f59e0b', 'border-width': 6, 'width': 36, 'height': 36 } },
+        { selector: '.inicio', style: { 'background-color': '#2563eb', 'color': '#fff', 'border-color': '#1d4ed8' } },
+        { selector: '.meta', style: { 'background-color': '#ef4444', 'color': '#fff', 'border-color': '#dc2626' } },
+        { selector: '.camino', style: { 'background-color': '#f59e0b', 'color': '#fff', 'border-color': '#d97706' } },
+        { selector: '.rayo-h', style: {
+            'line-style': 'dashed',
+            'line-color': '#f97316',
+            'width': 2,
+            'opacity': 0.85,
+            'target-arrow-shape': 'vee',
+            'target-arrow-color': '#f97316',
+            'label': 'h',
+            'font-size': '10px',
+            'color': '#f97316'
+          }
+        },
+        { selector: '.mejor', style: { 'line-color': '#22c55e', 'width': 4, 'target-arrow-shape': 'triangle', 'target-arrow-color': '#22c55e' } }
+      ],
+      layout: { name: 'preset' },
+      userZoomingEnabled: true,
+      userPanningEnabled: true
+    });
+
+    // Mostrar coords al hover (tooltip mejorado)
+    cy.nodes().forEach(n => {
+      const p = n.position();
+      n.data('title', `Nodo ${n.id()} (x=${Math.round(p.x)}, y=${Math.round(p.y)})`);
+    });
+
+    // Click = inicio
+    cy.on('tap', 'node', e => {
+      if (e.originalEvent.button !== 0) return; // Solo click izquierdo
+      startNode = e.target.id();
+      cy.nodes().removeClass('inicio');
+      e.target.addClass('inicio');
+      updateStatus(`Inicio = ${startNode}. Ahora clic derecho para elegir Meta.`);
+      calcular();
+    });
+
+    // Click derecho = meta
+    cy.on('cxttap', 'node', e => {
+      endNode = e.target.id();
+      cy.nodes().removeClass('meta');
+      e.target.addClass('meta');
+      updateStatus(`Meta = ${endNode}. Listo. Puedes avanzar paso a paso.`);
+      calcular();
+    });
+
+    // Doble click = mostrar información detallada
+    cy.on('dbltap', 'node', e => {
+      const node = e.target;
+      const p = node.position();
+      const id = node.id();
+      const vecinos = node.neighborhood('node').map(n => n.id()).join(', ');
+      
+      // Mostrar tooltip personalizado
+      const tooltip = document.createElement('div');
+      tooltip.className = 'node-tooltip';
+      tooltip.style.left = p.x + 20 + 'px';
+      tooltip.style.top = p.y - 20 + 'px';
+      tooltip.innerHTML = `
+        <strong>Nodo ${id}</strong><br>
+        Coord: (${Math.round(p.x)}, ${Math.round(p.y)})<br>
+        Vecinos: ${vecinos || 'ninguno'}<br>
+        ${id === startNode ? '📍 INICIO' : ''}
+        ${id === endNode ? '🎯 META' : ''}
+      `;
+      document.body.appendChild(tooltip);
+      setTimeout(() => tooltip.remove(), 3000);
+    });
+
+    // Resaltar aristas al pasar el mouse
+    cy.on('mouseover', 'edge', e => {
+      e.target.style('width', 4);
+      e.target.style('line-color', '#f59e0b');
+    });
+
+    cy.on('mouseout', 'edge', e => {
+      e.target.style('width', 2);
+      e.target.style('line-color', '#cbd5e1');
+    });
+
+    updateScale(document.getElementById('hScale').value);
+  }
+
+  function updateStatus(msg) {
+    document.getElementById('statusBar').textContent = msg;
+  }
+
+  function updateStats() {
+    const stats = document.getElementById('statsBar');
+    if (history.length > 0) {
+      const s = history[step];
+      stats.innerHTML = `Paso ${step+1}/${history.length} | OPEN: ${s.openAfter?.length || 0} | CLOSED: ${s.closed?.length || 0}`;
+    } else {
+      stats.innerHTML = '';
+    }
+  }
+
+  function updateScale(v) {
+    H_SCALE = Number(v);
+    document.getElementById('hScaleVal').textContent = v;
+    document.getElementById('hScaleLabel').textContent = v;
+    // Recalcular si ya hay inicio/meta
+    if (startNode && endNode) calcular();
+  }
+
+  // ======== HEURÍSTICA EUCLIDIANA ========
+  function getHData(nId, targetId) {
+    const p1 = cy.getElementById(nId).position();
+    const p2 = cy.getElementById(targetId).position();
+    const dx = (p2.x - p1.x);
+    const dy = (p2.y - p1.y);
+    const rawDist = Math.sqrt(dx*dx + dy*dy);
+    return {
+      val: rawDist / H_SCALE,
+      rawDist,
+      dx, dy,
+      x1: p1.x, y1: p1.y,
+      x2: p2.x, y2: p2.y
+    };
+  }
+
+  // ======== CRITERIO DE ORDEN (f, h, g, id) ========
+  function cmpAstar(a, b) {
+    if (a.f !== b.f) return a.f - b.f;
+    if (a.h !== b.h) return a.h - b.h;
+    if (a.g !== b.g) return a.g - b.g;
+    // id numérico si se puede
+    const ai = Number(a.id), bi = Number(b.id);
+    if (!Number.isNaN(ai) && !Number.isNaN(bi)) return ai - bi;
+    return (a.id + '').localeCompare(b.id + '');
+  }
+
+  // ======== A* (con registro de por qué se eligió) ========
+  function calcular() {
+    if (!startNode || !endNode) return;
+
+    history = [];
+    step = 0;
+
+    // OPEN guarda el mejor registro por nodo (best g)
+    const open = [];
+    const bestG = new Map();    // id -> best g
+    const parent = new Map();   // id -> parent id
+    const closed = new Set();
+    const camino = new Set();   // Para resaltar el camino final
+
+    const h0 = getHData(startNode, endNode);
+    open.push({
+      id: startNode,
+      g: 0,
+      gText: '0',
+      h: h0.val,
+      f: 0 + h0.val,
+      hDetail: h0,
+      from: null
+    });
+    bestG.set(startNode, 0);
+    parent.set(startNode, null);
+
+    // para “auditar” elección: antes de sacar current, capturamos OPEN ordenado
+    while (open.length > 0) {
+      open.sort(cmpAstar);
+
+      const openSnapshot = open.map(x => ({...x}));
+      const chosen = openSnapshot[0];
+
+      // current real (pop)
+      const current = open.shift();
+
+      // si ya cerrado, skip
+      if (closed.has(current.id)) continue;
+
+      // registrar decisión (por qué el actual fue elegido)
+      const reason = buildReason(openSnapshot);
+
+      // mover a CLOSED
+      closed.add(current.id);
+
+      // vecinos
+      const neighbors = [];
+      cy.getElementById(current.id).neighborhood('edge').forEach(edge => {
+        const n = edge.connectedNodes().filter(x => x.id() !== current.id)[0];
+        const nid = n.id();
+
+        if (closed.has(nid)) return;
+
+        const w = edge.data('weight');
+        const newG = current.g + w;
+
+        const prevBest = bestG.has(nid) ? bestG.get(nid) : Infinity;
+
+        // Si encontramos mejor camino (mejor g), actualizamos
+        if (newG < prevBest) {
+          bestG.set(nid, newG);
+          parent.set(nid, current.id);
+
+          const hData = getHData(nid, endNode);
+          const f = newG + hData.val;
+
+          const nodeData = {
+            id: nid,
+            g: newG,
+            gText: `${current.g} + ${w}`,
+            h: hData.val,
+            f,
+            hDetail: hData,
+            from: current.id,
+            viaEdge: edge.id(),
+            edgeW: w
+          };
+
+          neighbors.push(nodeData);
+
+          // importante: agregamos a OPEN aunque existan entradas viejas
+          // (al elegir, se quedará con el menor f/g efectivo)
+          open.push(nodeData);
+        } else {
+          // Para mostrar “por qué NO fue elegido” como vecino (ya tiene mejor g)
+          const hData = getHData(nid, endNode);
+          neighbors.push({
+            id: nid,
+            g: newG,
+            gText: `${current.g} + ${w}`,
+            h: hData.val,
+            f: newG + hData.val,
+            hDetail: hData,
+            from: current.id,
+            skipped: true,
+            skippedReason: `No se actualiza: ya existe un camino mejor con g=${prevBest}.`,
+            viaEdge: edge.id(),
+            edgeW: w
+          });
         }
+      });
 
-        function getHData(nId, targetId) {
-            const p1 = cy.getElementById(nId).position();
-            const p2 = cy.getElementById(targetId).position();
-            const rawDist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-            return { val: rawDist / 10, x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+      // coords del nodo actual
+      const pCur = cy.getElementById(current.id).position();
+
+      // snapshot de CLOSED
+      const closedSnapshot = Array.from(closed);
+
+      // snapshot OPEN ordenado para panel
+      const openSorted = open.slice().sort(cmpAstar).map(x => ({...x}));
+
+      history.push({
+        stepIndex: history.length,
+        chosenPreview: chosen, // el que ganó en el snapshot
+        reason,
+        cur: current.id,
+        curPos: { x: pCur.x, y: pCur.y },
+        g: current.g,
+        gText: current.gText,
+        h: current.h,
+        f: current.f,
+        hDetail: current.hDetail || getHData(current.id, endNode),
+        openBefore: openSnapshot,
+        openAfter: openSorted,
+        closed: closedSnapshot,
+        neighbors
+      });
+
+      if (current.id === endNode) {
+        // Reconstruir camino
+        let node = current.id;
+        while (node) {
+          camino.add(node);
+          node = parent.get(node);
         }
+        break;
+      }
+    }
 
-        function calcular() {
-            if (!startNode || !endNode) return;
-            history = [];
-            let open = [{ id: startNode, g: 0, gText: '0', h: getHData(startNode, endNode).val, f: getHData(startNode, endNode).val }];
-            let closed = new Map();
+    render();
+    updateStats();
+  }
 
-            while (open.length > 0) {
-                open.sort((a, b) => a.f - b.f);
-                let current = open.shift();
-                if (closed.has(current.id)) continue;
-                closed.set(current.id, current);
+  function buildReason(openSnapshot) {
+    if (!openSnapshot || openSnapshot.length === 0) return "OPEN vacío.";
+    const best = openSnapshot[0];
+    const second = openSnapshot.length > 1 ? openSnapshot[1] : null;
 
-                let myNeighbors = [];
-                cy.getElementById(current.id).neighborhood('edge').forEach(edge => {
-                    let n = edge.connectedNodes().filter(x => x.id() !== current.id)[0];
-                    let nid = n.id();
-                    if (!closed.has(nid)) {
-                        let w = edge.data('weight');
-                        let g = current.g + w;
-                        let hData = getHData(nid, endNode);
-                        let f = g + hData.val;
-                        let neighborData = { id: nid, g, gText: `${current.g} + ${w}`, h: hData.val, f, hDetail: hData };
-                        myNeighbors.push(neighborData);
-                        open.push(neighborData);
-                    }
-                });
+    if (!second) {
+      return `Se elige ${best.id} porque es el único candidato en OPEN.`;
+    }
 
-                history.push({ 
-                    cur: current.id, 
-                    open: JSON.parse(JSON.stringify(open)), 
-                    closed: Array.from(closed.keys()),
-                    g: current.g, gText: current.gText, h: current.h, f: current.f,
-                    competidores: myNeighbors,
-                    hDetail: getHData(current.id, endNode)
-                });
-                if (current.id === endNode) break;
-            }
-            step = 0; render();
+    // Comparación exacta según regla
+    if (best.f < second.f) {
+      return `Se elige ${best.id} porque tiene menor f (${best.f.toFixed(2)}) que ${second.id} (${second.f.toFixed(2)}).`;
+    }
+    if (best.f === second.f && best.h < second.h) {
+      return `Empate en f. Se elige ${best.id} por menor h (${best.h.toFixed(2)}) que ${second.id} (${second.h.toFixed(2)}).`;
+    }
+    if (best.f === second.f && best.h === second.h && best.g < second.g) {
+      return `Empate en f y h. Se elige ${best.id} por menor g (${best.g.toFixed(2)}) que ${second.id} (${second.g.toFixed(2)}).`;
+    }
+    return `Empate en f, h y g. Se elige ${best.id} por criterio final (ID).`;
+  }
+
+  // ======== RENDER PASO A PASO ========
+  function render() {
+    const s = history[step];
+    if (!s) return;
+
+    // limpiar estilos
+    cy.nodes().removeClass('visitado frontera activo camino');
+    cy.edges().removeClass('mejor');
+    cy.elements('.rayo-h').remove();
+
+    // aplicar CLOSED
+    s.closed.forEach(id => cy.getElementById(id).addClass('visitado'));
+    // aplicar OPEN (después)
+    (s.openAfter || []).forEach(n => cy.getElementById(n.id).addClass('frontera'));
+    // actual
+    if (s.cur) cy.getElementById(s.cur).addClass('activo');
+
+    // rayo heurístico: actual -> meta
+    if (s.cur && endNode && s.cur !== endNode) {
+      cy.add({ group: 'edges', data: { id: `hRay_${step}`, source: s.cur, target: endNode }, classes: 'rayo-h' });
+    }
+
+    // Resaltar camino si llegamos a la meta
+    if (s.cur === endNode) {
+      let node = endNode;
+      const camino = [node];
+      while (node) {
+        const parent = history.find(h => h.neighbors?.some(n => n.id === node && !n.skipped))?.cur;
+        if (parent) {
+          camino.unshift(parent);
+          node = parent;
+        } else {
+          break;
         }
+      }
+      camino.forEach(id => cy.getElementById(id).addClass('camino'));
+    }
 
-        function render() {
-            const s = history[step];
-            if (!s) return;
-            cy.nodes().removeClass('visitado frontera activo');
-            cy.elements('.rayo-h').remove();
-            s.closed.forEach(id => cy.getElementById(id).addClass('visitado'));
-            s.open.forEach(n => cy.getElementById(n.id).addClass('frontera'));
-            if (s.cur) cy.getElementById(s.cur).addClass('activo');
-            if (s.cur && s.cur !== endNode) {
-                cy.add({ group: 'edges', data: { source: s.cur, target: endNode }, classes: 'rayo-h' });
-            }
+    // tabla historial
+    const rows = history.map(h => {
+      const isCur = h.stepIndex === step;
+      const cls = isCur ? "fila-actual" : "fila-activa";
+      return `
+        <tr class="${cls}">
+          <td class="p-3 font-bold">${h.stepIndex}</td>
+          <td class="p-3 font-black">${h.cur}</td>
+          <td class="p-3 text-slate-500">(${Math.round(h.curPos.x)}, ${Math.round(h.curPos.y)})</td>
+          <td class="p-3 text-blue-600 font-bold">${h.g.toFixed(2)}</td>
+          <td class="p-3 text-orange-600 font-bold">${h.h.toFixed(2)}</td>
+          <td class="p-3 text-right font-black text-green-700">${h.f.toFixed(2)}</td>
+        </tr>
+      `;
+    }).join('');
+    document.getElementById('tabla-body').innerHTML = rows;
 
-            document.getElementById('tabla-body').innerHTML = history.slice(1, step + 1).map(h => `
-                <tr class="fila-activa">
-                    <td class="p-3 font-black">${h.cur}</td>
-                    <td class="p-3 text-blue-500">${h.g}</td>
-                    <td class="p-3 text-orange-500">${h.h.toFixed(1)}</td>
-                    <td class="p-3 text-right font-bold text-green-600">${h.f.toFixed(1)}</td>
-                </tr>
-            `).join('');
+    // OPEN / CLOSED panel
+    document.getElementById('openList').innerHTML = (s.openAfter && s.openAfter.length)
+      ? s.openAfter.map(o => {
+          const p = cy.getElementById(o.id).position();
+          return `• ${o.id} (x=${Math.round(p.x)},y=${Math.round(p.y)})  g=${o.g.toFixed(2)}  h=${o.h.toFixed(2)}  f=${o.f.toFixed(2)}`;
+        }).join('<br>')
+      : '<span class="text-slate-400">OPEN vacío</span>';
 
-            const mathPanel = document.getElementById('math-panel');
-            const h = s.hDetail;
-            mathPanel.innerHTML = `
-                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <div class="text-blue-700 font-bold mb-1">Costo Acumulado g(n):</div>
-                    <div class="text-slate-600 text-xs">${s.gText} = <span class="text-blue-600 font-bold">${s.g}</span></div>
+    document.getElementById('closedList').innerHTML = (s.closed && s.closed.length)
+      ? s.closed.map(id => {
+          const p = cy.getElementById(id).position();
+          return `• ${id} (x=${Math.round(p.x)},y=${Math.round(p.y)})`;
+        }).join('<br>')
+      : '<span class="text-slate-400">CLOSED vacío</span>';
+
+    // duelo: mostrar OPEN ordenado (los mejores arriba) y razón
+    const duelo = document.getElementById('duelo-container');
+    const openSorted = (s.openBefore || []).slice().sort(cmpAstar);
+
+    if (openSorted.length > 0) {
+      const top = openSorted[0];
+      duelo.innerHTML = `
+        <div class="p-3 rounded-xl border bg-slate-800 border-green-500 stat-card">
+          <div class="flex justify-between items-center text-[10px]">
+            <span class="text-slate-400">Ganador (se expandirá)</span>
+            <span class="text-green-400 font-bold">SELECCIONADO</span>
+          </div>
+          <div class="mt-1 text-lg font-black text-white">
+            Nodo ${top.id} — f=${top.f.toFixed(2)}
+          </div>
+          <div class="text-[11px] text-slate-300 mt-2">
+            g=${top.g.toFixed(2)} · h=${top.h.toFixed(2)} · (regla: min f → h → g → id)
+          </div>
+          <div class="text-[11px] text-amber-200 mt-2 font-bold">📌 Motivo:</div>
+          <div class="text-[11px] text-slate-200">${s.reason}</div>
+        </div>
+
+        <div class="mt-3 text-[10px] uppercase tracking-widest text-slate-500">Ranking OPEN (antes de elegir)</div>
+        <div class="space-y-2 mt-2">
+          ${openSorted.slice(0, 8).map((c, idx) => {
+            const is0 = idx === 0;
+            const p = cy.getElementById(c.id).position();
+            return `
+              <div class="p-3 rounded-xl border ${is0 ? 'bg-slate-800 border-green-500' : 'bg-slate-800 border-slate-700 opacity-60'} stat-card">
+                <div class="flex justify-between items-center text-[10px]">
+                  <span class="text-slate-400">#${idx+1} Nodo ${c.id}</span>
+                  <span class="text-slate-500">(x=${Math.round(p.x)}, y=${Math.round(p.y)})</span>
                 </div>
-                <div class="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                    <div class="text-orange-700 font-bold mb-1">Cálculo Euclidiano h(n):</div>
-                    <div class="text-slate-600 text-xs">
-                        √(${h.x2.toFixed(0)} - ${h.x1.toFixed(0)})² + (${h.y2.toFixed(0)} - ${h.y1.toFixed(0)})² <br>
-                        √(${Math.pow(h.x2-h.x1,2).toFixed(0)} + ${Math.pow(h.y2-h.y1,2).toFixed(0)}) / 10 = 
-                        <span class="text-orange-600 font-bold">${s.h.toFixed(2)}</span>
-                    </div>
+                <div class="text-sm font-black ${is0 ? 'text-white' : 'text-slate-400'}">
+                  f=${c.f.toFixed(2)}  ·  g=${c.g.toFixed(2)}  ·  h=${c.h.toFixed(2)}
                 </div>
-                <div class="bg-green-600 p-3 rounded-lg text-white text-center">
-                    <div class="text-xl font-black">${s.g} + ${s.h.toFixed(2)} = ${s.f.toFixed(2)}</div>
-                </div>
+              </div>
             `;
+          }).join('')}
+          ${openSorted.length > 8 ? `<div class="text-center text-slate-600 italic py-2 font-mono text-xs">... +${openSorted.length-8} candidatos más</div>` : ''}
+        </div>
+      `;
+    } else {
+      duelo.innerHTML = `<div class="text-center text-slate-600 italic py-10 font-mono text-xs">OPEN vacío en este paso.</div>`;
+    }
 
-            const duelo = document.getElementById('duelo-container');
-            if (s.competidores && s.competidores.length > 0) {
-                const compSorted = [...s.competidores].sort((a,b) => a.f - b.f);
-                duelo.innerHTML = compSorted.map((c, idx) => `
-                    <div class="p-2 rounded-lg border text-[10px] ${idx === 0 ? 'bg-slate-800 border-green-500' : 'bg-slate-800 border-slate-700 opacity-40'}">
-                        Candidato ${c.id} -> f: ${c.f.toFixed(1)}
+    // Panel matemático (cálculo h y f + coords)
+    const mathPanel = document.getElementById('math-panel');
+    const h = s.hDetail;
+
+    // reconstrucción básica del camino hasta current (para explicar “por qué el anterior”)
+    const prev = (s.chosenPreview && s.chosenPreview.from) ? s.chosenPreview.from : null;
+
+    mathPanel.innerHTML = `
+      <div class="grid grid-cols-2 gap-3">
+        <div class="bg-slate-50 p-3 rounded-lg border stat-card">
+          <div class="text-slate-700 font-bold mb-1">Nodo actual</div>
+          <div class="text-slate-600 text-xs">
+            id = <span class="font-black">${s.cur}</span><br>
+            coord = (<span class="font-black">${Math.round(s.curPos.x)}</span>, <span class="font-black">${Math.round(s.curPos.y)}</span>)
+          </div>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-lg border stat-card">
+          <div class="text-slate-700 font-bold mb-1">Meta</div>
+          <div class="text-slate-600 text-xs">
+            id = <span class="font-black">${endNode}</span><br>
+            coord = (${Math.round(h.x2)}, ${Math.round(h.y2)})
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 stat-card">
+        <div class="text-blue-700 font-bold mb-1">Costo real g(n)</div>
+        <div class="text-slate-700 text-xs">
+          g(n) = <span class="text-blue-700 font-black">${s.g.toFixed(2)}</span><br>
+          <span class="text-slate-500">detalle:</span> ${s.gText}
+          ${prev ? `<br><span class="text-slate-500">viene desde:</span> <span class="font-black">${prev}</span>` : ``}
+        </div>
+      </div>
+
+      <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 stat-card">
+        <div class="text-orange-700 font-bold mb-1">Heurística h(n) (Euclidiana)</div>
+        <div class="text-[10px] text-slate-500 mb-2">
+          h(n) = √((x₂-x₁)² + (y₂-y₁)²) / ${H_SCALE}
+        </div>
+        <div class="text-slate-700 text-xs leading-relaxed">
+          x₁=${h.x1.toFixed(0)}, y₁=${h.y1.toFixed(0)} &nbsp; | &nbsp; x₂=${h.x2.toFixed(0)}, y₂=${h.y2.toFixed(0)}<br>
+          dx = (x₂-x₁) = ${h.dx.toFixed(0)}<br>
+          dy = (y₂-y₁) = ${h.dy.toFixed(0)}<br>
+          distancia = √(dx² + dy²) = √(${(h.dx*h.dx).toFixed(0)} + ${(h.dy*h.dy).toFixed(0)}) =
+          <span class="font-black">${h.rawDist.toFixed(2)}</span><br>
+          h(n) = ${h.rawDist.toFixed(2)} / ${H_SCALE} =
+          <span class="text-orange-700 font-black">${s.h.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div class="bg-green-600 p-3 rounded-lg text-white text-center stat-card">
+        <div class="text-[10px] uppercase font-bold opacity-80">Total f(n)</div>
+        <div class="text-xl font-black">${s.g.toFixed(2)} + ${s.h.toFixed(2)} = ${s.f.toFixed(2)}</div>
+      </div>
+
+      <div class="bg-white p-3 rounded-lg border stat-card">
+        <div class="text-slate-800 font-bold mb-2">Vecinos evaluados desde ${s.cur}</div>
+        ${
+          (s.neighbors && s.neighbors.length)
+          ? `<div class="text-xs text-slate-700 space-y-2">
+              ${s.neighbors.map(nb => {
+                const p = cy.getElementById(nb.id).position();
+                return `
+                  <div class="p-2 rounded-lg border ${nb.skipped ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'} stat-card">
+                    <div class="flex justify-between">
+                      <span><b>${nb.id}</b> (x=${Math.round(p.x)},y=${Math.round(p.y)})</span>
+                      <span class="text-slate-500">w=${nb.edgeW ?? '-'} </span>
                     </div>
-                `).join('');
-            }
+                    <div class="math-font text-[11px]">
+                      g = ${nb.gText} = <b>${nb.g.toFixed(2)}</b> &nbsp; | &nbsp;
+                      h = <b>${nb.h.toFixed(2)}</b> &nbsp; | &nbsp;
+                      f = g+h = <b>${nb.f.toFixed(2)}</b>
+                    </div>
+                    ${nb.skipped ? `<div class="text-[11px] text-rose-700 mt-1">⚠ ${nb.skippedReason}</div>` : ``}
+                  </div>
+                `;
+              }).join('')}
+            </div>`
+          : `<div class="text-slate-400 italic text-xs">Sin vecinos nuevos.</div>`
         }
+      </div>
+    `;
 
-        function avanzar() { if (step < history.length - 1) { step++; render(); } }
-        function retroceder() { if (step > 0) { step--; render(); } }
-        function resetear() { location.reload(); }
-        window.onload = init;
-    </script>
+    // estado superior
+    if (s.cur === endNode) {
+      updateStatus(`✅ Llegaste a la meta (${endNode}) en el paso ${step}. Puedes retroceder para explicar el proceso.`);
+    } else {
+      updateStatus(`Paso ${step}: expandiendo nodo ${s.cur}. (OPEN=${(s.openAfter||[]).length}, CLOSED=${(s.closed||[]).length})`);
+    }
+  }
+
+  function avanzar() {
+    if (step < history.length - 1) { 
+      step++; 
+      render();
+      updateStats();
+    }
+  }
+  
+  function retroceder() {
+    if (step > 0) { 
+      step--; 
+      render();
+      updateStats();
+    }
+  }
+  
+  function resetear() { 
+    location.reload(); 
+  }
+
+  function exportarResultados() {
+    if (history.length === 0) {
+      alert('No hay datos para exportar');
+      return;
+    }
+    
+    const data = {
+      inicio: startNode,
+      meta: endNode,
+      escala: H_SCALE,
+      pasos: history.map(h => ({
+        paso: h.stepIndex,
+        nodo: h.cur,
+        g: h.g,
+        h: h.h,
+        f: h.f,
+        coordenadas: h.curPos,
+        decision: h.reason
+      }))
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `astar_${startNode}_to_${endNode}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  window.onload = init;
+</script>
 </body>
 </html>
